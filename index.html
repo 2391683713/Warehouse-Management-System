@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库管理系统 - 首页</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <h2>仓库管理系统</h2>
+            <ul>
+                <li id="menu-home" class="active"><a href="index.html">首页</a></li>
+                <li id="menu-product"><a href="pages/product.html">商品管理</a></li>
+                <li id="menu-inbound"><a href="pages/inbound.html">入库管理</a></li>
+                <li id="menu-outbound"><a href="pages/outbound.html">出库管理</a></li>
+                <li id="menu-inventory"><a href="pages/inventory.html">库存查询</a></li>
+                <li id="menu-logout" style="margin-top: 30px;"><a href="javascript:logout()">退出登录</a></li>
+            </ul>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="page-header">
+                <h1>系统首页</h1>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalProducts">0</div>
+                    <div class="stat-label">商品总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalStock">0</div>
+                    <div class="stat-label">库存总量</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="todayInbound">0</div>
+                    <div class="stat-label">今日入库</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="todayOutbound">0</div>
+                    <div class="stat-label">今日出库</div>
+                </div>
+            </div>
+            
+            <!-- 最近入库 -->
+            <div class="card">
+                <h3>最近入库记录</h3>
+                <table id="recentInbound">
+                    <thead>
+                        <tr>
+                            <th>商品名称</th>
+                            <th>数量</th>
+                            <th>操作人</th>
+                            <th>时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" style="text-align: center; color: #909399;">暂无数据</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 最近出库 -->
+            <div class="card">
+                <h3>最近出库记录</h3>
+                <table id="recentOutbound">
+                    <thead>
+                        <tr>
+                            <th>商品名称</th>
+                            <th>数量</th>
+                            <th>操作人</th>
+                            <th>时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" style="text-align: center; color: #909399;">暂无数据</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/common.js"></script>
+    <script>
+        // 检查登录
+        checkLogin();
+        
+        // 加载统计数据
+        function loadStats() {
+            const products = getProducts();
+            const inboundRecords = getInboundRecords();
+            const outboundRecords = getOutboundRecords();
+            
+            // 商品总数
+            document.getElementById('totalProducts').textContent = products.length;
+            
+            // 库存总量
+            const totalStock = products.reduce((sum, p) => sum + parseInt(p.stock || 0), 0);
+            document.getElementById('totalStock').textContent = totalStock;
+            
+            // 今日入库
+            const today = new Date().toDateString();
+            const todayIn = inboundRecords.filter(r => new Date(r.time).toDateString() === today);
+            const todayInQty = todayIn.reduce((sum, r) => sum + parseInt(r.quantity || 0), 0);
+            document.getElementById('todayInbound').textContent = todayInQty;
+            
+            // 今日出库
+            const todayOut = outboundRecords.filter(r => new Date(r.time).toDateString() === today);
+            const todayOutQty = todayOut.reduce((sum, r) => sum + parseInt(r.quantity || 0), 0);
+            document.getElementById('todayOutbound').textContent = todayOutQty;
+        }
+        
+        // 加载最近入库记录
+        function loadRecentInbound() {
+            const records = getInboundRecords().slice(0, 5);
+            const tbody = document.querySelector('#recentInbound tbody');
+            
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #909399;">暂无数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = records.map(r => {
+                const product = getProducts().find(p => p.id === r.productId);
+                return `
+                    <tr>
+                        <td>${product ? product.name : '未知商品'}</td>
+                        <td>${r.quantity}</td>
+                        <td>${r.operator || '管理员'}</td>
+                        <td>${r.time}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 加载最近出库记录
+        function loadRecentOutbound() {
+            const records = getOutboundRecords().slice(0, 5);
+            const tbody = document.querySelector('#recentOutbound tbody');
+            
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #909399;">暂无数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = records.map(r => {
+                const product = getProducts().find(p => p.id === r.productId);
+                return `
+                    <tr>
+                        <td>${product ? product.name : '未知商品'}</td>
+                        <td>${r.quantity}</td>
+                        <td>${r.operator || '管理员'}</td>
+                        <td>${r.time}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 页面加载时执行
+        window.onload = function() {
+            loadStats();
+            loadRecentInbound();
+            loadRecentOutbound();
+        };
+    </script>
+</body>
+</html>
