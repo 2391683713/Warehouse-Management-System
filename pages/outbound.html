@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库管理系统 - 出库管理</title>
+    <link rel="stylesheet" href="../css/common.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <h2>仓库管理系统</h2>
+            <ul>
+                <li id="menu-home"><a href="../index.html">首页</a></li>
+                <li id="menu-product"><a href="product.html">商品管理</a></li>
+                <li id="menu-inbound"><a href="inbound.html">入库管理</a></li>
+                <li id="menu-outbound" class="active"><a href="outbound.html">出库管理</a></li>
+                <li id="menu-inventory"><a href="inventory.html">库存查询</a></li>
+                <li id="menu-logout" style="margin-top: 30px;"><a href="javascript:logout()">退出登录</a></li>
+            </ul>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="page-header">
+                <h1>出库管理</h1>
+            </div>
+            
+            <div class="card">
+                <!-- 操作栏 -->
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <button class="btn btn-warning" onclick="showAddModal()">+ 新增出库</button>
+                    <span style="color: #909399;">共 <span id="totalCount" style="color: #409eff; font-weight: bold;">0</span> 条出库记录</span>
+                </div>
+                
+                <!-- 出库记录列表 -->
+                <table id="outboundTable">
+                    <thead>
+                        <tr>
+                            <th width="120">出库单号</th>
+                            <th>商品名称</th>
+                            <th width="100">出库数量</th>
+                            <th width="100">操作人</th>
+                            <th width="160">出库时间</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 数据由JS填充 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新增出库弹窗 -->
+    <div id="outboundModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 30px; border-radius: 8px; width: 480px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <h3 style="margin-bottom: 20px; color: #303133;">新增出库</h3>
+            <form id="outboundForm">
+                <div class="form-item">
+                    <label>选择商品 <span style="color: #f56c6c;">*</span></label>
+                    <select id="productSelect" required style="height: 38px;">
+                        <option value="">请选择商品</option>
+                    </select>
+                </div>
+                <div class="form-item">
+                    <label>出库数量 <span style="color: #f56c6c;">*</span></label>
+                    <input type="number" id="outboundQty" min="1" value="1" required style="height: 38px;">
+                </div>
+                <div class="form-item">
+                    <label>操作人</label>
+                    <input type="text" id="operator" value="管理员" style="height: 38px;">
+                </div>
+                <div class="form-item">
+                    <label>备注</label>
+                    <input type="text" id="remark" placeholder="请输入备注信息（选填）" style="height: 38px;">
+                </div>
+                <div style="text-align: right; margin-top: 25px;">
+                    <button type="button" class="btn" onclick="closeModal()" style="padding: 8px 20px;">取消</button>
+                    <button type="submit" class="btn btn-primary" style="padding: 8px 20px;">确认出库</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="../js/common.js"></script>
+    <script src="../js/data.js"></script>
+    <script>
+        // 检查登录
+        checkLogin();
+        
+        // 加载出库记录
+        function loadOutboundRecords() {
+            const records = getOutboundRecords();
+            const tbody = document.querySelector('#outboundTable tbody');
+            document.getElementById('totalCount').textContent = records.length;
+            
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #909399; padding: 40px 0;">暂无出库记录</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = records.map(r => {
+                const product = getProducts().find(p => p.id === r.productId);
+                return `
+                    <tr>
+                        <td>CK${r.id}</td>
+                        <td>${product ? product.name : '未知商品'}</td>
+                        <td style="color: #f56c6c; font-weight: bold;">-${r.quantity}</td>
+                        <td>${r.operator || '-'}</td>
+                        <td>${r.time}</td>
+                        <td>${r.remark || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 加载商品下拉选项
+        function loadProductOptions() {
+            const products = getProducts();
+            const select = document.getElementById('productSelect');
+            select.innerHTML = '<option value="">请选择商品</option>' + 
+                products.map(p => `<option value="${p.id}">${p.name}（当前库存：${p.stock}）</option>`).join('');
+        }
+        
+        // 显示新增弹窗
+        function showAddModal() {
+            loadProductOptions();
+            document.getElementById('outboundForm').reset();
+            document.getElementById('operator').value = '管理员';
+            document.getElementById('outboundModal').style.display = 'block';
+        }
+        
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('outboundModal').style.display = 'none';
+        }
+        
+        // 点击弹窗外部关闭
+        document.getElementById('outboundModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
+        // 表单提交
+        document.getElementById('outboundForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const productId = parseInt(document.getElementById('productSelect').value);
+            const quantity = parseInt(document.getElementById('outboundQty').value);
+            const operator = document.getElementById('operator').value.trim();
+            const remark = document.getElementById('remark').value.trim();
+            
+            if (!productId) {
+                alert('请选择商品');
+                return;
+            }
+            
+            if (quantity <= 0) {
+                alert('出库数量必须大于0');
+                return;
+            }
+            
+            // 检查库存是否充足
+            const product = getProducts().find(p => p.id === productId);
+            if (!product) {
+                alert('商品不存在');
+                return;
+            }
+            
+            if (parseInt(product.stock) < quantity) {
+                alert('库存不足！当前库存：' + product.stock);
+                return;
+            }
+            
+            // 添加出库记录
+            addOutboundRecord({
+                productId: productId,
+                quantity: quantity,
+                operator: operator,
+                remark: remark
+            });
+            
+            alert('出库成功！');
+            closeModal();
+            loadOutboundRecords();
+        });
+        
+        // 页面加载
+        window.onload = function() {
+            initData();
+            loadOutboundRecords();
+        };
+    </script>
+</body>
+</html>
