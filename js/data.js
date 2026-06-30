@@ -107,4 +107,4 @@ window.addEventListener('load', function() {
     if (!window.location.pathname.includes('login')) {
         initData();
     }
-});
+});  
