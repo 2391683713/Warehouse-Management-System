@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库管理系统 - 库存查询</title>
+    <link rel="stylesheet" href="../css/common.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <h2>仓库管理系统</h2>
+            <ul>
+                <li id="menu-home"><a href="../index.html">首页</a></li>
+                <li id="menu-product"><a href="product.html">商品管理</a></li>
+                <li id="menu-inbound"><a href="inbound.html">入库管理</a></li>
+                <li id="menu-outbound"><a href="outbound.html">出库管理</a></li>
+                <li id="menu-inventory" class="active"><a href="inventory.html">库存查询</a></li>
+                <li id="menu-logout" style="margin-top: 30px;"><a href="javascript:logout()">退出登录</a></li>
+            </ul>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="page-header">
+                <h1>库存查询</h1>
+            </div>
+            
+            <div class="card">
+                <!-- 搜索栏 -->
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="请输入商品名称搜索...">
+                    <select id="categoryFilter">
+                        <option value="">全部分类</option>
+                        <option value="电子产品">电子产品</option>
+                        <option value="办公用品">办公用品</option>
+                        <option value="办公家具">办公家具</option>
+                    </select>
+                    <select id="stockFilter">
+                        <option value="">全部库存</option>
+                        <option value="low">库存不足（<10）</option>
+                        <option value="normal">库存正常（10-100）</option>
+                        <option value="high">库存充足（>100）</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="searchInventory()">搜索</button>
+                    <button class="btn" onclick="resetSearch()">重置</button>
+                </div>
+                
+                <!-- 统计信息 -->
+                <div style="margin-bottom: 15px; padding: 15px; background: #f5f7fa; border-radius: 4px; display: flex; gap: 40px;">
+                    <div>
+                        <span style="color: #909399;">商品总数：</span>
+                        <span style="color: #409eff; font-size: 18px; font-weight: bold;" id="totalProducts">0</span>
+                        <span style="color: #909399;"> 种</span>
+                    </div>
+                    <div>
+                        <span style="color: #909399;">库存总量：</span>
+                        <span style="color: #67c23a; font-size: 18px; font-weight: bold;" id="totalStock">0</span>
+                        <span style="color: #909399;"> 件</span>
+                    </div>
+                    <div>
+                        <span style="color: #909399;">库存预警：</span>
+                        <span style="color: #f56c6c; font-size: 18px; font-weight: bold;" id="warningCount">0</span>
+                        <span style="color: #909399;"> 种</span>
+                    </div>
+                </div>
+                
+                <!-- 库存列表 -->
+                <table id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th width="100">商品ID</th>
+                            <th>商品名称</th>
+                            <th width="100">分类</th>
+                            <th width="80">单位</th>
+                            <th width="100">库存数量</th>
+                            <th width="100">单价</th>
+                            <th width="100">库存状态</th>
+                            <th>供应商</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 数据由JS填充 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../js/common.js"></script>
+    <script src="../js/data.js"></script>
+    <script>
+        // 检查登录
+        checkLogin();
+        
+        // 获取库存状态标签
+        function getStockStatus(stock) {
+            stock = parseInt(stock);
+            if (stock < 10) {
+                return '<span class="status-tag status-danger">库存不足</span>';
+            } else if (stock < 100) {
+                return '<span class="status-tag status-warning">库存正常</span>';
+            } else {
+                return '<span class="status-tag status-success">库存充足</span>';
+            }
+        }
+        
+        // 加载库存列表
+        function loadInventory(products) {
+            const tbody = document.querySelector('#inventoryTable tbody');
+            
+            if (!products) {
+                products = getProducts();
+            }
+            
+            // 计算统计数据
+            const totalProducts = products.length;
+            const totalStock = products.reduce((sum, p) => sum + parseInt(p.stock || 0), 0);
+            const warningCount = products.filter(p => parseInt(p.stock) < 10).length;
+            
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('totalStock').textContent = totalStock;
+            document.getElementById('warningCount').textContent = warningCount;
+            
+            if (products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #909399; padding: 40px 0;">暂无数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = products.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.name}</td>
+                    <td>${p.category}</td>
+                    <td>${p.unit}</td>
+                    <td style="font-weight: bold;">${p.stock}</td>
+                    <td>¥${p.price}</td>
+                    <td>${getStockStatus(p.stock)}</td>
+                    <td>${p.supplier || '-'}</td>
+                </tr>
+            `).join('');
+        }
+        
+        // 搜索库存
+        function searchInventory() {
+            const keyword = document.getElementById('searchInput').value.trim();
+            const category = document.getElementById('categoryFilter').value;
+            const stockFilter = document.getElementById('stockFilter').value;
+            
+            let products = getProducts();
+            
+            // 按名称搜索
+            if (keyword) {
+                products = products.filter(p => p.name.includes(keyword));
+            }
+            
+            // 按分类筛选
+            if (category) {
+                products = products.filter(p => p.category === category);
+            }
+            
+            // 按库存状态筛选
+            if (stockFilter === 'low') {
+                products = products.filter(p => parseInt(p.stock) < 10);
+            } else if (stockFilter === 'normal') {
+                products = products.filter(p => parseInt(p.stock) >= 10 && parseInt(p.stock) <= 100);
+            } else if (stockFilter === 'high') {
+                products = products.filter(p => parseInt(p.stock) > 100);
+            }
+            
+            loadInventory(products);
+        }
+        
+        // 重置搜索
+        function resetSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('stockFilter').value = '';
+            loadInventory();
+        }
+        
+        // 回车搜索
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchInventory();
+            }
+        });
+        
+        // 页面加载
+        window.onload = function() {
+            initData();
+            loadInventory();
+        };
+    </script>
+</body>
+</html>
