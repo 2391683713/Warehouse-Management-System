@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { query, run, transaction } = require('../db');
+const { db } = require('../db');
 
 // 获取入库记录列表
 router.get('/', (req, res) => {
-    const records = query(`
+    const records = db.prepare(`
         SELECT ir.*, p.name as product_name, p.unit as product_unit
         FROM inbound_records ir
         LEFT JOIN products p ON ir.product_id = p.id
         ORDER BY ir.id DESC
-    `);
+    `).all();
     
     res.json({
         success: true,
@@ -36,68 +36,61 @@ router.post('/', (req, res) => {
     }
     
     // 检查商品是否存在
-    const products = query('SELECT * FROM products WHERE id = ?', [product_id]);
-    if (products.length === 0) {
+    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(product_id);
+    if (!product) {
         return res.status(404).json({ success: false, message: '商品不存在' });
     }
     
-    try {
-        let recordId;
+    // 使用事务：添加入库记录 + 更新库存
+    const addInbound = db.transaction(() => {
+        // 添加入库记录
+        const result = db.prepare(`
+            INSERT INTO inbound_records (product_id, quantity, operator, remark)
+            VALUES (?, ?, ?, ?)
+        `).run(product_id, quantity, operator || '管理员', remark || '');
         
-        transaction(() => {
-            // 添加入库记录
-            const result = run(`
-                INSERT INTO inbound_records (product_id, quantity, operator, remark)
-                VALUES (?, ?, ?, ?)
-            `, [product_id, quantity, operator || '管理员', remark || '']);
-            
-            recordId = result.lastInsertRowid;
-            
-            // 更新库存
-            run(`
-                UPDATE products 
-                SET stock = stock + ? 
-                WHERE id = ?
-            `, [quantity, product_id]);
-        });
+        // 更新库存
+        db.prepare(`
+            UPDATE products 
+            SET stock = stock + ? 
+            WHERE id = ?
+        `).run(quantity, product_id);
         
-        // 返回完整的入库记录
-        const newRecord = query(`
-            SELECT ir.*, p.name as product_name
-            FROM inbound_records ir
-            LEFT JOIN products p ON ir.product_id = p.id
-            WHERE ir.id = ?
-        `, [recordId]);
-        
-        res.json({
-            success: true,
-            message: '入库成功',
-            data: newRecord[0]
-        });
-    } catch (error) {
-        console.error('入库失败:', error);
-        res.status(500).json({
-            success: false,
-            message: '入库失败'
-        });
-    }
+        return result.lastInsertRowid;
+    });
+    
+    const recordId = addInbound();
+    
+    // 返回完整的入库记录
+    const newRecord = db.prepare(`
+        SELECT ir.*, p.name as product_name
+        FROM inbound_records ir
+        LEFT JOIN products p ON ir.product_id = p.id
+        WHERE ir.id = ?
+    `).get(recordId);
+    
+    res.json({
+        success: true,
+        message: '入库成功',
+        data: newRecord
+    });
 });
 
 // 获取今日入库统计
 router.get('/stats/today', (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     
-    const stats = query(`
+    const stats = db.prepare(`
         SELECT 
             COUNT(*) as count,
             COALESCE(SUM(quantity), 0) as total_quantity
         FROM inbound_records
         WHERE DATE(create_time) = ?
-    `, [today]);
+    `).get(today);
     
     res.json({
         success: true,
-        data: stats[0] || { count: 0, total_quantity: 0 }
+        data: stats
     });
 });
 
