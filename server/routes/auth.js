@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../db');
+const { query } = require('../db');
 
 // 登录
 router.post('/login', (req, res) => {
@@ -13,17 +13,17 @@ router.post('/login', (req, res) => {
         });
     }
 
-    const user = db.prepare(`
+    const users = query(`
         SELECT id, username, role, create_time 
         FROM users 
         WHERE username = ? AND password = ?
-    `).get(username, password);
+    `, [username, password]);
 
-    if (user) {
+    if (users.length > 0) {
         res.json({
             success: true,
             message: '登录成功',
-            data: user
+            data: users[0]
         });
     } else {
         res.status(401).json({
@@ -35,11 +35,11 @@ router.post('/login', (req, res) => {
 
 // 获取用户列表
 router.get('/users', (req, res) => {
-    const users = db.prepare(`
+    const users = query(`
         SELECT id, username, role, create_time 
         FROM users 
         ORDER BY id
-    `).all();
+    `);
     
     res.json({
         success: true,

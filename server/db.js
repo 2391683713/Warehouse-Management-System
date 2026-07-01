@@ -135,14 +135,11 @@ function run(sql, params = []) {
 
 // 执行事务
 function transaction(callback) {
-    db.run('BEGIN');
     try {
         const result = callback();
-        db.run('COMMIT');
         saveDatabase();
         return result;
     } catch (error) {
-        db.run('ROLLBACK');
         throw error;
     }
 }

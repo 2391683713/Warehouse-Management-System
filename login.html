@@ -1,29 +1,86 @@
-// 登录表单提交
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库管理系统 - 登录</title>
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <h1>仓库管理系统</h1>
+            <p class="subtitle">Warehouse Management System</p>
+            
+            <form id="loginForm">
+                <div class="form-item">
+                    <label>用户名</label>
+                    <input type="text" id="username" placeholder="请输入用户名" required>
+                </div>
+                <div class="form-item">
+                    <label>密码</label>
+                    <input type="password" id="password" placeholder="请输入密码" required>
+                </div>
+                <div id="errorMsg" class="error-msg" style="display: none; color: #f56c6c; margin-bottom: 15px; text-align: center;"></div>
+                <button type="submit" class="btn btn-primary btn-block">登 录</button>
+            </form>
+            
+            <div class="login-tips">
+                <p>默认账号：admin / 123456</p>
+            </div>
+        </div>
+    </div>
     
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const errorMsg = document.getElementById('errorMsg');
-    
-    if (!username) {
-        showError('请输入用户名');
-        return;
-    }
-    if (!password) {
-        showError('请输入密码');
-        return;
-    }
-    
-    // 调用后端 API
-    const result = await API.auth.login(username, password);
-    
-    if (result.success) {
-        // 登录成功，保存用户信息
-        saveData('currentUser', result.data);
-        // 跳转到首页
-        window.location.href = 'index.html';
-    } else {
-        showError(result.message || '登录失败');
-    }
-});
+    <!-- 把 JS 放到最后 -->
+    <script src="js/api.js"></script>
+    <script>
+        // 显示错误提示
+        function showError(msg) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = msg;
+            errorMsg.style.display = 'block';
+        }
+        
+        // 隐藏错误提示
+        function hideError() {
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+        
+        // 登录表单提交
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideError();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!username) {
+                showError('请输入用户名');
+                return;
+            }
+            if (!password) {
+                showError('请输入密码');
+                return;
+            }
+            
+            try {
+                const result = await API.auth.login(username, password);
+                
+                if (result.success) {
+                    localStorage.setItem('currentUser', JSON.stringify(result.data));
+                    window.location.href = 'index.html';
+                } else {
+                    showError(result.message || '登录失败');
+                }
+            } catch (error) {
+                showError('网络错误，请检查后端服务是否启动');
+                console.error('登录失败:', error);
+            }
+        });
+        
+        document.getElementById('username').addEventListener('input', hideError);
+        document.getElementById('password').addEventListener('input', hideError);
+    </script>
+</body>
+</html>

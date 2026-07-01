@@ -8,7 +8,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- 侧边栏 -->
         <div class="sidebar">
             <h2>仓库管理系统</h2>
             <ul>
@@ -21,20 +20,16 @@
             </ul>
         </div>
         
-        <!-- 主内容区 -->
         <div class="main-content">
             <div class="page-header">
                 <h1>出库管理</h1>
             </div>
             
             <div class="card">
-                <!-- 操作栏 -->
-                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <button class="btn btn-warning" onclick="showAddModal()">+ 新增出库</button>
-                    <span style="color: #909399;">共 <span id="totalCount" style="color: #409eff; font-weight: bold;">0</span> 条出库记录</span>
+                <div class="search-bar">
+                    <button class="btn btn-success" onclick="showAddModal()">+ 新增出库</button>
                 </div>
                 
-                <!-- 出库记录列表 -->
                 <table id="outboundTable">
                     <thead>
                         <tr>
@@ -47,7 +42,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- 数据由JS填充 -->
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #909399; padding: 40px 0;">加载中...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -56,26 +53,26 @@
     
     <!-- 新增出库弹窗 -->
     <div id="outboundModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 30px; border-radius: 8px; width: 480px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 30px; border-radius: 8px; width: 450px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
             <h3 style="margin-bottom: 20px; color: #303133;">新增出库</h3>
             <form id="outboundForm">
                 <div class="form-item">
                     <label>选择商品 <span style="color: #f56c6c;">*</span></label>
-                    <select id="productSelect" required style="height: 38px;">
+                    <select id="outboundProduct" required style="height: 38px;">
                         <option value="">请选择商品</option>
                     </select>
                 </div>
                 <div class="form-item">
                     <label>出库数量 <span style="color: #f56c6c;">*</span></label>
-                    <input type="number" id="outboundQty" min="1" value="1" required style="height: 38px;">
+                    <input type="number" id="outboundQuantity" min="1" value="1" required style="height: 38px;">
                 </div>
                 <div class="form-item">
                     <label>操作人</label>
-                    <input type="text" id="operator" value="管理员" style="height: 38px;">
+                    <input type="text" id="outboundOperator" placeholder="请输入操作人" style="height: 38px;">
                 </div>
                 <div class="form-item">
                     <label>备注</label>
-                    <input type="text" id="remark" placeholder="请输入备注信息（选填）" style="height: 38px;">
+                    <textarea id="outboundRemark" rows="3" placeholder="请输入备注（选填）"></textarea>
                 </div>
                 <div style="text-align: right; margin-top: 25px;">
                     <button type="button" class="btn" onclick="closeModal()" style="padding: 8px 20px;">取消</button>
@@ -85,113 +82,119 @@
         </div>
     </div>
     
-    <script src="../js/common.js"></script>
-    <script src="../js/data.js"></script>
+    <script src="../js/api.js"></script>
     <script>
-        // 检查登录
-        checkLogin();
+        function checkLogin() {
+            const user = localStorage.getItem('currentUser');
+            if (!user) {
+                window.location.href = '../login.html';
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = '../login.html';
+        }
         
         // 加载出库记录
-        function loadOutboundRecords() {
-            const records = getOutboundRecords();
-            const tbody = document.querySelector('#outboundTable tbody');
-            document.getElementById('totalCount').textContent = records.length;
+        async function loadOutboundRecords() {
+            const result = await API.outbound.getList();
             
-            if (records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #909399; padding: 40px 0;">暂无出库记录</td></tr>';
-                return;
+            if (result.success) {
+                const records = result.data;
+                const tbody = document.querySelector('#outboundTable tbody');
+                
+                if (records.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #909399; padding: 40px 0;">暂无数据</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = records.map(function(r) {
+                    return '<tr>' +
+                        '<td>CK' + String(r.id).padStart(4, '0') + '</td>' +
+                        '<td>' + r.product_name + '</td>' +
+                        '<td style="color: #f56c6c; font-weight: bold;">-' + r.quantity + '</td>' +
+                        '<td>' + (r.operator || '-') + '</td>' +
+                        '<td>' + r.create_time + '</td>' +
+                        '<td>' + (r.remark || '-') + '</td>' +
+                    '</tr>';
+                }).join('');
             }
-            
-            tbody.innerHTML = records.map(r => {
-                const product = getProducts().find(p => p.id === r.productId);
-                return `
-                    <tr>
-                        <td>CK${r.id}</td>
-                        <td>${product ? product.name : '未知商品'}</td>
-                        <td style="color: #f56c6c; font-weight: bold;">-${r.quantity}</td>
-                        <td>${r.operator || '-'}</td>
-                        <td>${r.time}</td>
-                        <td>${r.remark || '-'}</td>
-                    </tr>
-                `;
-            }).join('');
         }
         
         // 加载商品下拉选项
-        function loadProductOptions() {
-            const products = getProducts();
-            const select = document.getElementById('productSelect');
-            select.innerHTML = '<option value="">请选择商品</option>' + 
-                products.map(p => `<option value="${p.id}">${p.name}（当前库存：${p.stock}）</option>`).join('');
+        async function loadProductOptions() {
+            const result = await API.products.getList();
+            
+            if (result.success) {
+                const select = document.getElementById('outboundProduct');
+                select.innerHTML = '<option value="">请选择商品</option>';
+                
+                result.data.forEach(function(p) {
+                    if (p.stock > 0) { // 只显示有库存的商品
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = p.name + '（库存：' + p.stock + '）';
+                        select.appendChild(option);
+                    }
+                });
+            }
         }
         
-        // 显示新增弹窗
         function showAddModal() {
-            loadProductOptions();
-            document.getElementById('outboundForm').reset();
-            document.getElementById('operator').value = '管理员';
+            loadProductOptions(); // 每次打开都重新加载商品列表
+            document.getElementById('outboundQuantity').value = 1;
+            document.getElementById('outboundOperator').value = '';
+            document.getElementById('outboundRemark').value = '';
             document.getElementById('outboundModal').style.display = 'block';
         }
         
-        // 关闭弹窗
         function closeModal() {
             document.getElementById('outboundModal').style.display = 'none';
         }
         
-        // 点击弹窗外部关闭
         document.getElementById('outboundModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeModal();
             }
         });
         
-        // 表单提交
-        document.getElementById('outboundForm').addEventListener('submit', function(e) {
+        document.getElementById('outboundForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const productId = parseInt(document.getElementById('productSelect').value);
-            const quantity = parseInt(document.getElementById('outboundQty').value);
-            const operator = document.getElementById('operator').value.trim();
-            const remark = document.getElementById('remark').value.trim();
+            const productId = document.getElementById('outboundProduct').value;
+            const quantity = parseInt(document.getElementById('outboundQuantity').value);
+            const operator = document.getElementById('outboundOperator').value.trim();
+            const remark = document.getElementById('outboundRemark').value.trim();
             
             if (!productId) {
                 alert('请选择商品');
                 return;
             }
             
-            if (quantity <= 0) {
-                alert('出库数量必须大于0');
+            if (!quantity || quantity <= 0) {
+                alert('请输入有效的出库数量');
                 return;
             }
             
-            // 检查库存是否充足
-            const product = getProducts().find(p => p.id === productId);
-            if (!product) {
-                alert('商品不存在');
-                return;
-            }
-            
-            if (parseInt(product.stock) < quantity) {
-                alert('库存不足！当前库存：' + product.stock);
-                return;
-            }
-            
-            // 添加出库记录
-            addOutboundRecord({
-                productId: productId,
+            const result = await API.outbound.add({
+                product_id: parseInt(productId),
                 quantity: quantity,
                 operator: operator,
                 remark: remark
             });
             
-            alert('出库成功！');
-            closeModal();
-            loadOutboundRecords();
+            if (result.success) {
+                alert('出库成功');
+                closeModal();
+                loadOutboundRecords();
+            } else {
+                alert(result.message || '出库失败');
+            }
         });
         
-        // 页面加载
         window.onload = function() {
-            initData();
+            checkLogin();
             loadOutboundRecords();
         };
     </script>

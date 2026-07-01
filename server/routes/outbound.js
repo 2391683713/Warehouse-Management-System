@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../db');
+const { query, run, transaction } = require('../db');
 
 // 获取出库记录列表
 router.get('/', (req, res) => {
-    const records = db.prepare(`
+    const records = query(`
         SELECT orr.*, p.name as product_name, p.unit as product_unit
         FROM outbound_records orr
         LEFT JOIN products p ON orr.product_id = p.id
         ORDER BY orr.id DESC
-    `).all();
+    `);
     
     res.json({
         success: true,
@@ -36,10 +36,12 @@ router.post('/', (req, res) => {
     }
     
     // 检查商品是否存在
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(product_id);
-    if (!product) {
+    const products = query('SELECT * FROM products WHERE id = ?', [product_id]);
+    if (products.length === 0) {
         return res.status(404).json({ success: false, message: '商品不存在' });
     }
+    
+    const product = products[0];
     
     // 检查库存是否充足
     if (product.stock < quantity) {
@@ -49,56 +51,59 @@ router.post('/', (req, res) => {
         });
     }
     
-    // 使用事务：添加出库记录 + 扣减库存
-    const addOutbound = db.transaction(() => {
-        // 添加出库记录
-        const result = db.prepare(`
-            INSERT INTO outbound_records (product_id, quantity, operator, remark)
-            VALUES (?, ?, ?, ?)
-        `).run(product_id, quantity, operator || '管理员', remark || '');
-        
-        // 扣减库存
-        db.prepare(`
-            UPDATE products 
-            SET stock = stock - ? 
-            WHERE id = ?
-        `).run(quantity, product_id);
-        
-        return result.lastInsertRowid;
-    });
+    try {
+    // 添加出库记录
+    const result = run(`
+        INSERT INTO outbound_records (product_id, quantity, operator, remark)
+        VALUES (?, ?, ?, ?)
+    `, [product_id, quantity, operator || '管理员', remark || '']);
     
-    const recordId = addOutbound();
+    const recordId = result.lastInsertRowid;
+    
+    // 扣减库存
+    run(`
+        UPDATE products 
+        SET stock = stock - ? 
+        WHERE id = ?
+    `, [quantity, product_id]);
     
     // 返回完整的出库记录
-    const newRecord = db.prepare(`
+    const newRecord = query(`
         SELECT orr.*, p.name as product_name
         FROM outbound_records orr
         LEFT JOIN products p ON orr.product_id = p.id
         WHERE orr.id = ?
-    `).get(recordId);
+    `, [recordId]);
     
     res.json({
         success: true,
         message: '出库成功',
-        data: newRecord
+        data: newRecord[0]
     });
+} catch (error) {
+    console.error('出库失败:', error);
+    res.status(500).json({
+        success: false,
+        message: '出库失败'
+    });
+}
 });
 
 // 获取今日出库统计
 router.get('/stats/today', (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     
-    const stats = db.prepare(`
+    const stats = query(`
         SELECT 
             COUNT(*) as count,
             COALESCE(SUM(quantity), 0) as total_quantity
         FROM outbound_records
         WHERE DATE(create_time) = ?
-    `).get(today);
+    `, [today]);
     
     res.json({
         success: true,
-        data: stats
+        data: stats[0] || { count: 0, total_quantity: 0 }
     });
 });
 

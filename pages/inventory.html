@@ -8,7 +8,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- 侧边栏 -->
         <div class="sidebar">
             <h2>仓库管理系统</h2>
             <ul>
@@ -21,7 +20,6 @@
             </ul>
         </div>
         
-        <!-- 主内容区 -->
         <div class="main-content">
             <div class="page-header">
                 <h1>库存查询</h1>
@@ -33,37 +31,22 @@
                     <input type="text" id="searchInput" placeholder="请输入商品名称搜索...">
                     <select id="categoryFilter">
                         <option value="">全部分类</option>
-                        <option value="电子产品">电子产品</option>
-                        <option value="办公用品">办公用品</option>
-                        <option value="办公家具">办公家具</option>
                     </select>
-                    <select id="stockFilter">
+                    <select id="statusFilter">
                         <option value="">全部库存</option>
-                        <option value="low">库存不足（<10）</option>
-                        <option value="normal">库存正常（10-100）</option>
-                        <option value="high">库存充足（>100）</option>
+                        <option value="low">库存不足</option>
+                        <option value="normal">库存正常</option>
+                        <option value="high">库存充足</option>
                     </select>
                     <button class="btn btn-primary" onclick="searchInventory()">搜索</button>
                     <button class="btn" onclick="resetSearch()">重置</button>
                 </div>
                 
                 <!-- 统计信息 -->
-                <div style="margin-bottom: 15px; padding: 15px; background: #f5f7fa; border-radius: 4px; display: flex; gap: 40px;">
-                    <div>
-                        <span style="color: #909399;">商品总数：</span>
-                        <span style="color: #409eff; font-size: 18px; font-weight: bold;" id="totalProducts">0</span>
-                        <span style="color: #909399;"> 种</span>
-                    </div>
-                    <div>
-                        <span style="color: #909399;">库存总量：</span>
-                        <span style="color: #67c23a; font-size: 18px; font-weight: bold;" id="totalStock">0</span>
-                        <span style="color: #909399;"> 件</span>
-                    </div>
-                    <div>
-                        <span style="color: #909399;">库存预警：</span>
-                        <span style="color: #f56c6c; font-size: 18px; font-weight: bold;" id="warningCount">0</span>
-                        <span style="color: #909399;"> 种</span>
-                    </div>
+                <div class="stats-bar" style="display: flex; gap: 30px; margin-bottom: 20px; padding: 15px; background: #f5f7fa; border-radius: 4px;">
+                    <div>商品总数：<span id="totalProducts" style="font-weight: bold; color: #409eff;">0</span> 种</div>
+                    <div>库存总量：<span id="totalStock" style="font-weight: bold; color: #67c23a;">0</span> 件</div>
+                    <div>库存预警：<span id="warningCount" style="font-weight: bold; color: #f56c6c;">0</span> 种</div>
                 </div>
                 
                 <!-- 库存列表 -->
@@ -81,104 +64,126 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- 数据由JS填充 -->
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #909399; padding: 40px 0;">加载中...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
     
-    <script src="../js/common.js"></script>
-    <script src="../js/data.js"></script>
+    <script src="../js/api.js"></script>
     <script>
-        // 检查登录
-        checkLogin();
+        const LOW_STOCK = 10;   // 库存不足阈值
+        const HIGH_STOCK = 100; // 库存充足阈值
         
-        // 获取库存状态标签
+        function checkLogin() {
+            const user = localStorage.getItem('currentUser');
+            if (!user) {
+                window.location.href = '../login.html';
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = '../login.html';
+        }
+        
+        // 获取库存状态
         function getStockStatus(stock) {
-            stock = parseInt(stock);
-            if (stock < 10) {
-                return '<span class="status-tag status-danger">库存不足</span>';
-            } else if (stock < 100) {
-                return '<span class="status-tag status-warning">库存正常</span>';
+            if (stock < LOW_STOCK) {
+                return { text: '库存不足', class: 'status-danger' };
+            } else if (stock > HIGH_STOCK) {
+                return { text: '库存充足', class: 'status-success' };
             } else {
-                return '<span class="status-tag status-success">库存充足</span>';
+                return { text: '库存正常', class: 'status-warning' };
             }
         }
         
-        // 加载库存列表
-        function loadInventory(products) {
-            const tbody = document.querySelector('#inventoryTable tbody');
-            
-            if (!products) {
-                products = getProducts();
+        // 加载分类选项
+        async function loadCategories() {
+            const result = await API.products.getCategories();
+            if (result.success) {
+                const select = document.getElementById('categoryFilter');
+                result.data.forEach(function(cat) {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    select.appendChild(option);
+                });
             }
-            
-            // 计算统计数据
-            const totalProducts = products.length;
-            const totalStock = products.reduce((sum, p) => sum + parseInt(p.stock || 0), 0);
-            const warningCount = products.filter(p => parseInt(p.stock) < 10).length;
-            
-            document.getElementById('totalProducts').textContent = totalProducts;
-            document.getElementById('totalStock').textContent = totalStock;
-            document.getElementById('warningCount').textContent = warningCount;
-            
-            if (products.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #909399; padding: 40px 0;">暂无数据</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = products.map(p => `
-                <tr>
-                    <td>${p.id}</td>
-                    <td>${p.name}</td>
-                    <td>${p.category}</td>
-                    <td>${p.unit}</td>
-                    <td style="font-weight: bold;">${p.stock}</td>
-                    <td>¥${p.price}</td>
-                    <td>${getStockStatus(p.stock)}</td>
-                    <td>${p.supplier || '-'}</td>
-                </tr>
-            `).join('');
         }
         
-        // 搜索库存
+        // 加载库存数据
+        async function loadInventory(params) {
+            const result = await API.products.getList(params);
+            
+            if (result.success) {
+                let products = result.data;
+                
+                // 按库存状态筛选
+                const statusFilter = document.getElementById('statusFilter').value;
+                if (statusFilter) {
+                    products = products.filter(function(p) {
+                        if (statusFilter === 'low') return p.stock < LOW_STOCK;
+                        if (statusFilter === 'high') return p.stock > HIGH_STOCK;
+                        return p.stock >= LOW_STOCK && p.stock <= HIGH_STOCK;
+                    });
+                }
+                
+                // 更新统计
+                const totalProducts = products.length;
+                const totalStock = products.reduce(function(sum, p) {
+                    return sum + p.stock;
+                }, 0);
+                const warningCount = products.filter(function(p) {
+                    return p.stock < LOW_STOCK;
+                }).length;
+                
+                document.getElementById('totalProducts').textContent = totalProducts;
+                document.getElementById('totalStock').textContent = totalStock;
+                document.getElementById('warningCount').textContent = warningCount;
+                
+                // 更新表格
+                const tbody = document.querySelector('#inventoryTable tbody');
+                
+                if (products.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #909399; padding: 40px 0;">暂无数据</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = products.map(function(p) {
+                    const status = getStockStatus(p.stock);
+                    return '<tr>' +
+                        '<td>' + String(p.id).padStart(4, '0') + '</td>' +
+                        '<td>' + p.name + '</td>' +
+                        '<td>' + p.category + '</td>' +
+                        '<td>' + p.unit + '</td>' +
+                        '<td>' + p.stock + '</td>' +
+                        '<td>¥' + p.price + '</td>' +
+                        '<td><span class="status-tag ' + status.class + '">' + status.text + '</span></td>' +
+                        '<td>' + (p.supplier || '-') + '</td>' +
+                    '</tr>';
+                }).join('');
+            }
+        }
+        
         function searchInventory() {
             const keyword = document.getElementById('searchInput').value.trim();
             const category = document.getElementById('categoryFilter').value;
-            const stockFilter = document.getElementById('stockFilter').value;
-            
-            let products = getProducts();
-            
-            // 按名称搜索
-            if (keyword) {
-                products = products.filter(p => p.name.includes(keyword));
-            }
-            
-            // 按分类筛选
-            if (category) {
-                products = products.filter(p => p.category === category);
-            }
-            
-            // 按库存状态筛选
-            if (stockFilter === 'low') {
-                products = products.filter(p => parseInt(p.stock) < 10);
-            } else if (stockFilter === 'normal') {
-                products = products.filter(p => parseInt(p.stock) >= 10 && parseInt(p.stock) <= 100);
-            } else if (stockFilter === 'high') {
-                products = products.filter(p => parseInt(p.stock) > 100);
-            }
-            
-            loadInventory(products);
+            loadInventory({ keyword: keyword, category: category });
         }
         
-        // 重置搜索
         function resetSearch() {
             document.getElementById('searchInput').value = '';
             document.getElementById('categoryFilter').value = '';
-            document.getElementById('stockFilter').value = '';
+            document.getElementById('statusFilter').value = '';
             loadInventory();
         }
+        
+        // 状态变化时也重新搜索
+        document.getElementById('statusFilter').addEventListener('change', searchInventory);
         
         // 回车搜索
         document.getElementById('searchInput').addEventListener('keypress', function(e) {
@@ -187,11 +192,11 @@
             }
         });
         
-        // 页面加载
         window.onload = function() {
-            initData();
+            checkLogin();
+            loadCategories();
             loadInventory();
         };
     </script>
 </body>
-</html>   
+</html>

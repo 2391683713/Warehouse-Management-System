@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../db');
+const { query, run } = require('../db');
 
 // 获取商品列表
 router.get('/', (req, res) => {
@@ -21,7 +21,7 @@ router.get('/', (req, res) => {
     
     sql += ' ORDER BY id DESC';
     
-    const products = db.prepare(sql).all(...params);
+    const products = query(sql, params);
     
     res.json({
         success: true,
@@ -31,10 +31,10 @@ router.get('/', (req, res) => {
 
 // 获取单个商品
 router.get('/:id', (req, res) => {
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+    const products = query('SELECT * FROM products WHERE id = ?', [req.params.id]);
     
-    if (product) {
-        res.json({ success: true, data: product });
+    if (products.length > 0) {
+        res.json({ success: true, data: products[0] });
     } else {
         res.status(404).json({ success: false, message: '商品不存在' });
     }
@@ -51,24 +51,24 @@ router.post('/', (req, res) => {
         });
     }
     
-    const result = db.prepare(`
+    const result = run(`
         INSERT INTO products (name, category, unit, stock, price, supplier)
         VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
         name,
         category || '其他',
         unit || '个',
         stock || 0,
         price || 0,
         supplier || ''
-    );
+    ]);
     
-    const newProduct = db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid);
+    const newProduct = query('SELECT * FROM products WHERE id = ?', [result.lastInsertRowid]);
     
     res.json({
         success: true,
         message: '新增成功',
-        data: newProduct
+        data: newProduct[0]
     });
 });
 
@@ -76,16 +76,18 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
     const { name, category, unit, stock, price, supplier } = req.body;
     
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
-    if (!product) {
+    const products = query('SELECT * FROM products WHERE id = ?', [req.params.id]);
+    if (products.length === 0) {
         return res.status(404).json({ success: false, message: '商品不存在' });
     }
     
-    db.prepare(`
+    const product = products[0];
+    
+    run(`
         UPDATE products 
         SET name = ?, category = ?, unit = ?, stock = ?, price = ?, supplier = ?
         WHERE id = ?
-    `).run(
+    `, [
         name || product.name,
         category !== undefined ? category : product.category,
         unit || product.unit,
@@ -93,25 +95,25 @@ router.put('/:id', (req, res) => {
         price !== undefined ? price : product.price,
         supplier !== undefined ? supplier : product.supplier,
         req.params.id
-    );
+    ]);
     
-    const updatedProduct = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+    const updatedProduct = query('SELECT * FROM products WHERE id = ?', [req.params.id]);
     
     res.json({
         success: true,
         message: '更新成功',
-        data: updatedProduct
+        data: updatedProduct[0]
     });
 });
 
 // 删除商品
 router.delete('/:id', (req, res) => {
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
-    if (!product) {
+    const products = query('SELECT * FROM products WHERE id = ?', [req.params.id]);
+    if (products.length === 0) {
         return res.status(404).json({ success: false, message: '商品不存在' });
     }
     
-    db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
+    run('DELETE FROM products WHERE id = ?', [req.params.id]);
     
     res.json({
         success: true,
@@ -121,12 +123,14 @@ router.delete('/:id', (req, res) => {
 
 // 获取分类列表
 router.get('/categories/list', (req, res) => {
-    const categories = db.prepare(`
+    const result = query(`
         SELECT DISTINCT category 
         FROM products 
         WHERE category IS NOT NULL AND category != ''
         ORDER BY category
-    `).all().map(item => item.category);
+    `);
+    
+    const categories = result.map(item => item.category);
     
     res.json({
         success: true,

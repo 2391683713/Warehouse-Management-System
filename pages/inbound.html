@@ -8,7 +8,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- 侧边栏 -->
         <div class="sidebar">
             <h2>仓库管理系统</h2>
             <ul>
@@ -21,20 +20,16 @@
             </ul>
         </div>
         
-        <!-- 主内容区 -->
         <div class="main-content">
             <div class="page-header">
                 <h1>入库管理</h1>
             </div>
             
             <div class="card">
-                <!-- 操作栏 -->
-                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="search-bar">
                     <button class="btn btn-success" onclick="showAddModal()">+ 新增入库</button>
-                    <span style="color: #909399;">共 <span id="totalCount" style="color: #409eff; font-weight: bold;">0</span> 条入库记录</span>
                 </div>
                 
-                <!-- 入库记录列表 -->
                 <table id="inboundTable">
                     <thead>
                         <tr>
@@ -47,7 +42,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- 数据由JS填充 -->
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #909399; padding: 40px 0;">加载中...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -56,26 +53,26 @@
     
     <!-- 新增入库弹窗 -->
     <div id="inboundModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 30px; border-radius: 8px; width: 480px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-            <h3 style="margin-bottom: 20px; color: #303133;">新增入库</h3>
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 30px; border-radius: 8px; width: 450px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <h3 style="margin-bottom: 20px; color: #303133;">新加入库</h3>
             <form id="inboundForm">
                 <div class="form-item">
                     <label>选择商品 <span style="color: #f56c6c;">*</span></label>
-                    <select id="productSelect" required style="height: 38px;">
+                    <select id="inboundProduct" required style="height: 38px;">
                         <option value="">请选择商品</option>
                     </select>
                 </div>
                 <div class="form-item">
                     <label>入库数量 <span style="color: #f56c6c;">*</span></label>
-                    <input type="number" id="inboundQty" min="1" value="1" required style="height: 38px;">
+                    <input type="number" id="inboundQuantity" min="1" value="1" required style="height: 38px;">
                 </div>
                 <div class="form-item">
                     <label>操作人</label>
-                    <input type="text" id="operator" value="管理员" style="height: 38px;">
+                    <input type="text" id="inboundOperator" placeholder="请输入操作人" style="height: 38px;">
                 </div>
                 <div class="form-item">
                     <label>备注</label>
-                    <input type="text" id="remark" placeholder="请输入备注信息（选填）" style="height: 38px;">
+                    <textarea id="inboundRemark" rows="3" placeholder="请输入备注（选填）"></textarea>
                 </div>
                 <div style="text-align: right; margin-top: 25px;">
                     <button type="button" class="btn" onclick="closeModal()" style="padding: 8px 20px;">取消</button>
@@ -85,101 +82,117 @@
         </div>
     </div>
     
-    <script src="../js/common.js"></script>
-    <script src="../js/data.js"></script>
+    <script src="../js/api.js"></script>
     <script>
-        // 检查登录
-        checkLogin();
+        function checkLogin() {
+            const user = localStorage.getItem('currentUser');
+            if (!user) {
+                window.location.href = '../login.html';
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = '../login.html';
+        }
         
         // 加载入库记录
-        function loadInboundRecords() {
-            const records = getInboundRecords();
-            const tbody = document.querySelector('#inboundTable tbody');
-            document.getElementById('totalCount').textContent = records.length;
+        async function loadInboundRecords() {
+            const result = await API.inbound.getList();
             
-            if (records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #909399; padding: 40px 0;">暂无入库记录</td></tr>';
-                return;
+            if (result.success) {
+                const records = result.data;
+                const tbody = document.querySelector('#inboundTable tbody');
+                
+                if (records.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #909399; padding: 40px 0;">暂无数据</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = records.map(function(r) {
+                    return '<tr>' +
+                        '<td>RK' + String(r.id).padStart(4, '0') + '</td>' +
+                        '<td>' + r.product_name + '</td>' +
+                        '<td style="color: #67c23a; font-weight: bold;">+' + r.quantity + '</td>' +
+                        '<td>' + (r.operator || '-') + '</td>' +
+                        '<td>' + r.create_time + '</td>' +
+                        '<td>' + (r.remark || '-') + '</td>' +
+                    '</tr>';
+                }).join('');
             }
-            
-            tbody.innerHTML = records.map(r => {
-                const product = getProducts().find(p => p.id === r.productId);
-                return `
-                    <tr>
-                        <td>RK${r.id}</td>
-                        <td>${product ? product.name : '未知商品'}</td>
-                        <td style="color: #67c23a; font-weight: bold;">+${r.quantity}</td>
-                        <td>${r.operator || '-'}</td>
-                        <td>${r.time}</td>
-                        <td>${r.remark || '-'}</td>
-                    </tr>
-                `;
-            }).join('');
         }
         
         // 加载商品下拉选项
-        function loadProductOptions() {
-            const products = getProducts();
-            const select = document.getElementById('productSelect');
-            select.innerHTML = '<option value="">请选择商品</option>' + 
-                products.map(p => `<option value="${p.id}">${p.name}（当前库存：${p.stock}）</option>`).join('');
+        async function loadProductOptions() {
+            const result = await API.products.getList();
+            
+            if (result.success) {
+                const select = document.getElementById('inboundProduct');
+                select.innerHTML = '<option value="">请选择商品</option>';
+                
+                result.data.forEach(function(p) {
+                    const option = document.createElement('option');
+                    option.value = p.id;
+                    option.textContent = p.name + '（库存：' + p.stock + '）';
+                    select.appendChild(option);
+                });
+            }
         }
         
-        // 显示新增弹窗
         function showAddModal() {
-            loadProductOptions();
-            document.getElementById('inboundForm').reset();
-            document.getElementById('operator').value = '管理员';
+            loadProductOptions(); // 每次打开都重新加载商品列表
+            document.getElementById('inboundQuantity').value = 1;
+            document.getElementById('inboundOperator').value = '';
+            document.getElementById('inboundRemark').value = '';
             document.getElementById('inboundModal').style.display = 'block';
         }
         
-        // 关闭弹窗
         function closeModal() {
             document.getElementById('inboundModal').style.display = 'none';
         }
         
-        // 点击弹窗外部关闭
         document.getElementById('inboundModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeModal();
             }
         });
         
-        // 表单提交
-        document.getElementById('inboundForm').addEventListener('submit', function(e) {
+        document.getElementById('inboundForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const productId = parseInt(document.getElementById('productSelect').value);
-            const quantity = parseInt(document.getElementById('inboundQty').value);
-            const operator = document.getElementById('operator').value.trim();
-            const remark = document.getElementById('remark').value.trim();
+            const productId = document.getElementById('inboundProduct').value;
+            const quantity = parseInt(document.getElementById('inboundQuantity').value);
+            const operator = document.getElementById('inboundOperator').value.trim();
+            const remark = document.getElementById('inboundRemark').value.trim();
             
             if (!productId) {
                 alert('请选择商品');
                 return;
             }
             
-            if (quantity <= 0) {
-                alert('入库数量必须大于0');
+            if (!quantity || quantity <= 0) {
+                alert('请输入有效的入库数量');
                 return;
             }
             
-            // 添加入库记录
-            addInboundRecord({
-                productId: productId,
+            const result = await API.inbound.add({
+                product_id: parseInt(productId),
                 quantity: quantity,
                 operator: operator,
                 remark: remark
             });
             
-            alert('入库成功！');
-            closeModal();
-            loadInboundRecords();
+            if (result.success) {
+                alert('入库成功');
+                closeModal();
+                loadInboundRecords();
+            } else {
+                alert(result.message || '入库失败');
+            }
         });
         
-        // 页面加载
         window.onload = function() {
-            initData();
+            checkLogin();
             loadInboundRecords();
         };
     </script>
