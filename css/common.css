@@ -1,75 +1,363 @@
-/* ===== 样式优化补充 ===== */
-
-/* 弹窗动画 */
-.modal-enter {
-    animation: modalFadeIn 0.3s ease;
+/* ========== 全局样式 ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
+body {
+    font-family: "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    color: #303133;
+    background-color: #f5f7fa;
+    line-height: 1.5;
 }
 
-/* 按钮hover效果增强 */
-.btn {
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+ul {
+    list-style: none;
+}
+
+/* ========== 容器布局 ========== */
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ========== 侧边栏 ========== */
+.sidebar {
+    width: 220px;
+    background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h2 {
+    padding: 25px 20px;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    letter-spacing: 2px;
+}
+
+.sidebar ul {
+    flex: 1;
+    padding: 15px 0;
+}
+
+.sidebar ul li {
+    margin-bottom: 2px;
+}
+
+.sidebar ul li a {
+    display: block;
+    padding: 12px 25px;
+    color: rgba(255, 255, 255, 0.8);
     transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+    font-size: 14px;
+}
+
+.sidebar ul li a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-left-color: #409eff;
+    padding-left: 30px;
+}
+
+.sidebar ul li.active a {
+    background-color: rgba(64, 158, 255, 0.3);
+    color: #fff;
+    border-left-color: #409eff;
+    font-weight: 500;
+}
+
+/* ========== 主内容区 ========== */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    overflow-x: auto;
+}
+
+.page-header {
+    margin-bottom: 20px;
+}
+
+.page-header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #303133;
+}
+
+/* ========== 卡片 ========== */
+.card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+}
+
+/* ========== 搜索栏 ========== */
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.search-bar input,
+.search-bar select {
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #606266;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.search-bar input:focus,
+.search-bar select:focus {
+    border-color: #409eff;
+}
+
+.search-bar input {
+    width: 200px;
+}
+
+.search-bar select {
+    min-width: 120px;
+    cursor: pointer;
+}
+
+/* ========== 按钮 ========== */
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    background: #fff;
+    color: #606266;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    line-height: 1;
 }
 
 .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    color: #409eff;
+    border-color: #c6e2ff;
+    background-color: #ecf5ff;
 }
 
-.btn:active {
-    transform: translateY(0);
+.btn-primary {
+    background-color: #409eff;
+    border-color: #409eff;
+    color: #fff;
 }
 
-/* 表格hover效果 */
-table tr {
-    transition: background-color 0.2s ease;
+.btn-primary:hover {
+    background-color: #66b1ff;
+    border-color: #66b1ff;
+    color: #fff;
 }
 
-/* 侧边栏菜单hover */
-.sidebar ul li {
-    transition: all 0.2s ease;
+.btn-success {
+    background-color: #67c23a;
+    border-color: #67c23a;
+    color: #fff;
 }
 
-/* 统计卡片动画 */
+.btn-success:hover {
+    background-color: #85ce61;
+    border-color: #85ce61;
+    color: #fff;
+}
+
+.btn-warning {
+    background-color: #e6a23c;
+    border-color: #e6a23c;
+    color: #fff;
+}
+
+.btn-warning:hover {
+    background-color: #ebb563;
+    border-color: #ebb563;
+    color: #fff;
+}
+
+.btn-danger {
+    background-color: #f56c6c;
+    border-color: #f56c6c;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #f78989;
+    border-color: #f78989;
+    color: #fff;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+}
+
+/* ========== 表格 ========== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+table thead th {
+    background-color: #f5f7fa;
+    color: #606266;
+    font-weight: 500;
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 1px solid #ebeef5;
+}
+
+table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ebeef5;
+    color: #606266;
+}
+
+table tbody tr:hover {
+    background-color: #f5f7fa;
+}
+
+table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ========== 表单 ========== */
+.form-item {
+    margin-bottom: 18px;
+}
+
+.form-item label {
+    display: block;
+    margin-bottom: 8px;
+    color: #606266;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.form-item input,
+.form-item select,
+.form-item textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #606266;
+    outline: none;
+    transition: border-color 0.3s ease;
+    font-family: inherit;
+}
+
+.form-item input:focus,
+.form-item select:focus,
+.form-item textarea:focus {
+    border-color: #409eff;
+}
+
+.form-item textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* ========== 统计卡片（首页用） ========== */
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
 .stat-card {
-    transition: all 0.3s ease;
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .stat-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
-/* 输入框focus效果 */
-.form-item input, .form-item select {
-    transition: border-color 0.2s ease;
+.stat-card .stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #fff;
+    flex-shrink: 0;
 }
 
-/* 卡片阴影优化 */
-.card {
-    transition: box-shadow 0.3s ease;
+.stat-card.blue .stat-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+.stat-card.green .stat-icon {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
 }
 
-/* 库存状态标签 */
+.stat-card.orange .stat-icon {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-card.purple .stat-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-card .stat-info {
+    flex: 1;
+}
+
+.stat-card .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 5px;
+}
+
+.stat-card .stat-label {
+    font-size: 13px;
+    color: #909399;
+}
+
+/* ========== 库存状态标签 ========== */
 .status-tag {
     display: inline-block;
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 4px;
     font-size: 12px;
+    font-weight: 500;
 }
 
 .status-danger {
@@ -85,4 +373,119 @@ table tr {
 .status-success {
     background-color: #f0f9eb;
     color: #67c23a;
+}
+
+/* ========== 统计栏（库存查询用） ========== */
+.stats-bar {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 20px;
+    padding: 15px 20px;
+    background: linear-gradient(90deg, #ecf5ff 0%, #f0f9ff 100%);
+    border-radius: 6px;
+    border-left: 4px solid #409eff;
+}
+
+.stats-bar > div {
+    font-size: 14px;
+    color: #606266;
+}
+
+.stats-bar span {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+/* ========== 弹窗 ========== */
+.modal-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 8px;
+    padding: 25px 30px;
+    width: 480px;
+    max-width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    animation: slideDown 0.3s ease;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ebeef5;
+}
+
+.modal-footer {
+    text-align: right;
+    margin-top: 25px;
+    padding-top: 15px;
+    border-top: 1px solid #ebeef5;
+}
+
+.modal-footer .btn {
+    margin-left: 10px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========== 错误提示 ========== */
+.error-msg {
+    color: #f56c6c;
+    font-size: 13px;
+    margin-bottom: 15px;
+    text-align: center;
+    padding: 8px;
+    background: #fef0f0;
+    border-radius: 4px;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 1200px) {
+    .stats-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+    }
+    
+    .sidebar h2,
+    .sidebar ul li a span {
+        display: none;
+    }
+    
+    .stats-cards {
+        grid-template-columns: 1fr;
+    }
 }
