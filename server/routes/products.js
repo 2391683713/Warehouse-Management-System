@@ -113,6 +113,11 @@ router.delete('/:id', (req, res) => {
         return res.status(404).json({ success: false, message: '商品不存在' });
     }
     
+    // 先删除相关的入库和出库记录
+    run('DELETE FROM inbound_records WHERE product_id = ?', [req.params.id]);
+    run('DELETE FROM outbound_records WHERE product_id = ?', [req.params.id]);
+    
+    // 再删除商品
     run('DELETE FROM products WHERE id = ?', [req.params.id]);
     
     res.json({

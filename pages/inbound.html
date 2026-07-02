@@ -112,7 +112,7 @@
                 tbody.innerHTML = records.map(function(r) {
                     return '<tr>' +
                         '<td>RK' + String(r.id).padStart(4, '0') + '</td>' +
-                        '<td>' + r.product_name + '</td>' +
+                        '<td>' + (r.product_name || '【已删除商品】') + '</td>' +
                         '<td style="color: #67c23a; font-weight: bold;">+' + r.quantity + '</td>' +
                         '<td>' + (r.operator || '-') + '</td>' +
                         '<td>' + r.create_time + '</td>' +
